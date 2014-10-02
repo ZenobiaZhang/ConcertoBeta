@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -O2 
+CFLAGS = -Wall -O2 -pg
 LIBS = -lm
 
 DRIVER_CPE_OBJS = driver_cpe.o kernels.o fcyc.o clock.o 

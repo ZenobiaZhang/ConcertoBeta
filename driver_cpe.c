@@ -288,6 +288,7 @@ void test_rotate(int bench_index)
 
 	/* Check that the code works */
 	run_rotate_benchmark(bench_index, dim);
+
 	if (check_rotate(dim)) {
 	    printf("Benchmark \"%s\" failed correctness check for dimension %d.\n",
 		   benchmarks_rotate[bench_index].description, dim);
@@ -311,12 +312,12 @@ void test_rotate(int bench_index)
 	    arglist[3] = (void *) result;
 
 	    create(dim);
-	    num_cycles = fcyc_v((test_funct_v)&func_wrapper, arglist); 
-	    cpe = num_cycles/work;
+	    num_cycles = fcyc_v((test_funct_v)&func_wrapper, arglist);
+        cpe = num_cycles/work;
 	    benchmarks_rotate[bench_index].cpes[test_num] = cpe;
 	}
     }
-
+    
     /* 
      * Print results as a table 
      */

@@ -1,4 +1,5 @@
 make clean
 make all
 ./driver_cpe
-#gprof driver_cpe gmon.out
+# perf stat -e L1-dcache-load-misses ./driver_cpe
+# gprof driver_cpe gmon.out

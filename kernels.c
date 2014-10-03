@@ -180,6 +180,21 @@ void naive_rotate(int dim, pixel *src, pixel *dst, int iB, int jB)
                 {
 	                dst[RIDX(dim-1-ii, jj, dim)] = src[RIDX(jj, ii, dim)];
                 }
+                ii++;
+                for (jj = j; jj < jj_limit; jj++)
+                {
+	                dst[RIDX(dim-1-ii, jj, dim)] = src[RIDX(jj, ii, dim)];
+                }
+                ii++;
+                for (jj = j; jj < jj_limit; jj++)
+                {
+	                dst[RIDX(dim-1-ii, jj, dim)] = src[RIDX(jj, ii, dim)];
+                }
+                ii++;
+                for (jj = j; jj < jj_limit; jj++)
+                {
+	                dst[RIDX(dim-1-ii, jj, dim)] = src[RIDX(jj, ii, dim)];
+                }
             }
         }
     }

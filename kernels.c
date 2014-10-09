@@ -209,16 +209,6 @@ void naive_rotate_unrolled(int dim, pixel *src, pixel *dst)
 }
 
 char default_naive_rotate_descr[] = "default_naive_rotate: Naive baseline implementation";
-char default_naive_rotate_descr[] = "default_naive_rotate: Naive baseline implementation";
-void default_naive_rotate(int dim, pixel *src, pixel *dst) 
-{
-    int i, j;
-
-    for (i = 0; i < dim; i++)
-	for (j = 0; j < dim; j++)
-	    dst[RIDX(dim-1-j, i, dim)] = src[RIDX(i, j, dim)];
-}
-
 void default_naive_rotate(int dim, pixel *src, pixel *dst) 
 {
     int i, j;

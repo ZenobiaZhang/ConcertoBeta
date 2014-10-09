@@ -1,7 +1,5 @@
 CC = gcc
 CFLAGS = -Wall -O2 -pg
-# CFLAGS = -Wall -g -pg -pg
-# CFLAGS = -Wall -O2 -fprofile-arcs -ftest-coverage
 LIBS = -lm
 
 DRIVER_CPE_OBJS = driver_cpe.o kernels.o fcyc.o clock.o 

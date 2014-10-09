@@ -11,11 +11,8 @@
 /* Misc constants */
 #define BSIZE 32     /* cache block size in bytes */     
 #define MIN(a,b) (((a) < (b)) ? (a) : (b))
-#define DEBUG_PROFILE_TIME 0
-#define DEBUG_PROFILE_TIMES 0
-#define DEBUG_PRINT DEBUG_PROFILE_TIME || DEBUG_PROFILE_TIMES
-#define log(args ...) do {{printf(args); printf("\n");}} while (0)
-
+#define DEBUG_PRINT 1
+#define log(args ...) do {if (DEBUG_PRINT) {printf(args); printf("\n");}} while (0)
 /* 
  * ECE454 Students: 
  * Please fill in the following team struct 
@@ -37,6 +34,12 @@ team_t team = {
 /******************
  * Helper Functions
  ******************/
+void swap(pixel *a, pixel *b)
+{
+    pixel temp = *a;
+    *a = *b;
+    *b = temp;
+}
 
 unsigned get_seconds() {
     struct tms t;
@@ -45,8 +48,24 @@ unsigned get_seconds() {
     return t.tms_utime;
 }
 
-// for benchmarking
-void copy_block(int dim, pixel *src, pixel *dst, int B) 
+void transpose(int dim, pixel *src, pixel *dst) 
+{
+    int i, j;
+    pixel *src_px=src, *dst_col=dst, *dst_px=dst;
+
+    // top right portion
+    for (i = 0; i < dim; i++)
+    {
+        dst_px = dst_col++;
+        for (j = 0; j < dim; j++)
+        {
+            *dst_px = *(src_px++);
+            dst_px += dim;
+        }
+    }
+}
+
+void transpose_block(int dim, pixel *src, pixel *dst, int B) 
 {
     int i, j, ii, jj, ii_limit, jj_limit;
 
@@ -57,41 +76,15 @@ void copy_block(int dim, pixel *src, pixel *dst, int B)
         {
             jj_limit = MIN(dim, j+B);
 
-            int index;
+            int dst_index, src_index;
             
             for (ii = i; ii < ii_limit; ii++)
             {
-                index = j*dim + ii;
-                
+                dst_index = j*dim + i + ii;
+                src_index = (i + ii)*dim + j;
                 for (jj = j; jj < jj_limit; jj++)
                 {
-                    dst[index] = src[index];
-                    index ++;
-                }
-            }
-        }
-    }
-}
-
-// two step part 1
-void transpose_block(int dim, pixel *src, pixel *dst, int B) 
-{
-    int i, j, ii, jj, ii_limit, jj_limit, dst_index, src_index;
-
-    for (i = 0; i < dim; i+=B)
-    {
-        ii_limit = MIN(dim, i+B);
-        for (j = 0; j < dim; j+=B)
-        {
-            jj_limit = MIN(dim, j+B);
-            
-            for (ii = i; ii < ii_limit; ii++)
-            {
-                dst_index = j*dim + ii;
-                src_index = ii*dim + j;
-                
-                for (jj = j; jj < jj_limit; jj++)
-                {
+                    log("src %d dst %d", src_index, dst_index);
                     dst[dst_index] = src[src_index];
                     src_index ++;
                     dst_index += dim;
@@ -101,8 +94,17 @@ void transpose_block(int dim, pixel *src, pixel *dst, int B)
     }
 }
 
-// two step part 2: in-place version
-void flip_ip(int dim, pixel *src) 
+void xrows(int dim, pixel *src, pixel *dst) 
+{
+    int i, j;
+
+    for (i = 0; i < dim; i++)
+        for (j = 0; j < dim; j++)
+            dst[RIDX(dim-i-1, j, dim)] = src[RIDX(i, j, dim)];
+}
+
+// in-place version
+void xrows_ip(int dim, pixel *src) 
 {
     int i, j, midpoint = dim/2;
     pixel *a=src + dim*(dim - 1), *b=src, temp;
@@ -140,48 +142,10 @@ void flip_ip(int dim, pixel *src)
  ******************************************************/
 
 /* 
- * new_rotate - The naive baseline version of rotate with optimizations
+ * naive_rotate - The naive baseline version of rotate 
  */
-char new_rotate_descr[] = "new_rotate: Naive baseline implementation with optimizations";
-void new_rotate(int dim, pixel *src, pixel *dst, int iB, int jB) 
-{
-    int i, j, ii, jj, ii_limit, jj_limit;
-
-    for (i = 0; i < dim; i+=iB)
-    {
-        ii_limit = MIN(dim, i+iB);
-        for (j = 0; j < dim; j+=jB)
-        {
-            jj_limit = MIN(dim, j+jB);
-            for (ii = i; ii < ii_limit; ii++)
-            {
-                for (jj = j; jj < jj_limit; jj++)
-                {
-	                dst[RIDX(dim-1-ii, jj, dim)] = src[RIDX(jj, ii, dim)];
-                }
-                ii++;
-                for (jj = j; jj < jj_limit; jj++)
-                {
-	                dst[RIDX(dim-1-ii, jj, dim)] = src[RIDX(jj, ii, dim)];
-                }
-                ii++;
-                for (jj = j; jj < jj_limit; jj++)
-                {
-	                dst[RIDX(dim-1-ii, jj, dim)] = src[RIDX(jj, ii, dim)];
-                }
-                ii++;
-                for (jj = j; jj < jj_limit; jj++)
-                {
-	                dst[RIDX(dim-1-ii, jj, dim)] = src[RIDX(jj, ii, dim)];
-                }
-            }
-        }
-    }
-}
-
-// does not help since loops are already unrolled
-char naive_rotate_unrolled_descr[] = "naive_rotate_unrolled: Naive baseline implementation with unrolling";
-void naive_rotate_unrolled(int dim, pixel *src, pixel *dst) 
+char naive_rotate_descr[] = "naive_rotate: Naive baseline implementation";
+void naive_rotate(int dim, pixel *src, pixel *dst) 
 {
     int i, j;
 
@@ -208,8 +172,8 @@ void naive_rotate_unrolled(int dim, pixel *src, pixel *dst)
         }
 }
 
-char default_naive_rotate_descr[] = "default_naive_rotate: Naive baseline implementation";
-void default_naive_rotate(int dim, pixel *src, pixel *dst) 
+char naive_rotate_old_descr[] = "naive_rotate: Naive baseline implementation";
+void naive_rotate_old(int dim, pixel *src, pixel *dst) 
 {
     int i, j;
 
@@ -218,55 +182,36 @@ void default_naive_rotate(int dim, pixel *src, pixel *dst)
 	    dst[RIDX(dim-1-j, i, dim)] = src[RIDX(i, j, dim)];
 }
 
-// for debugging and profiling
 void rotate_core(int dim, pixel *src, pixel *dst, int D) 
 {
-    if (dim < 256)
+    if (dim < 16)
     {
-#if DEBUG_PRINT
         log("doing improved naive rotate");
-#endif
-        new_rotate(dim, src, dst, D*2, D/2);
+        
+        naive_rotate(dim, src, dst);
     }
     else
     {
-#if DEBUG_PRINT
         log("doing 2 step rotate on input size %d", dim);
-#endif
 
-#if DEBUG_PROFILE_TIME
-        clock_t test, start, middle, end;
-        
-        test = clock();
-        copy_block(dim, src, dst, D);
-        start = clock();
-#elif DEBUG_PROFILE_TIMES
-        unsigned test, start, middle, end;
-        
-        test = get_seconds();
-        copy_block(dim, src, dst, D);
+//         clock_t start, middle, end;
+        unsigned start, middle, end;
+
+//         start = clock();
         start = get_seconds();
-#endif
-
         // transpose the image in src and store
         transpose_block(dim, src, dst, D);
 
-#if DEBUG_PROFILE_TIME
-        middle = clock();
-#elif DEBUG_PROFILE_TIMES
+//         middle = clock();
         middle = get_seconds();
-#endif
-
         // perform row exchange on the transposed image
-        flip_ip(dim, dst);
+        xrows_ip(dim, dst);
 
-#if DEBUG_PROFILE_TIME
-        end = clock();
-        log("test took %u transpose took %u and flip took %u", (float)start - (float)test, (float)middle - (float)start, (float)end - (float)middle);
-#elif DEBUG_PROFILE_TIMES
+//         end = clock();
         end = get_seconds();
-        log("test took %u transpose took %u and flip took %u", start - test, middle - start, end - middle);
-#endif
+
+//         log("transpose took %u and xrows took %u", (float)middle - (float)start, (float)end - (float)middle);
+        log("transpose took %u and xrows took %u", middle - start, end - middle);
     }
 }
 
@@ -281,40 +226,26 @@ void rotate_core(int dim, pixel *src, pixel *dst, int D)
 char rotate_descr[] = "rotate: Current working version";
 void rotate(int dim, pixel *src, pixel *dst) 
 {
-    // negativ/zero dims are invalid
-    if (dim <= 0) return;
-
-    // from empirical results
-    int cache_size = (dim > 724) ? 32 : 64;
-
-    // the best tiles are not squares because we want to keep the j tiles to be 8
-    // which is the number of pixels that fit in a cache line
-    new_rotate(dim, src, dst, cache_size*4, cache_size/4);
+    rotate_core(dim, src, dst, 16);
 }
 
 
 char rotate_two_descr[] = "second attempt";
 void attempt_two(int dim, pixel *src, pixel *dst) 
 {
-    rotate_core(dim, src, dst, 32);
+    rotate_core(dim, src, dst, 24);
 }
 
 char rotate_three_descr[] = "third attempt";
 void attempt_three(int dim, pixel *src, pixel *dst) 
 {
-    rotate_core(dim, src, dst, 64);
+    rotate_core(dim, src, dst, 32);
 }
 
 char rotate_four_descr[] = "fourth attempt";
 void attempt_four(int dim, pixel *src, pixel *dst) 
 {
-    rotate_core(dim, src, dst, 96);
-}
-
-char rotate_five_descr[] = "fifth attempt";
-void attempt_five(int dim, pixel *src, pixel *dst) 
-{
-    rotate_core(dim, src, dst, 128);
+    rotate_core(dim, src, dst, 40);
 }
 
 
@@ -328,13 +259,13 @@ void attempt_five(int dim, pixel *src, pixel *dst)
 
 void register_rotate_functions() 
 {
-//     add_rotate_function(&default_naive_rotate, default_naive_rotate_descr);   
+    //add_rotate_function(&naive_rotate, naive_rotate_descr);   
     add_rotate_function(&rotate, rotate_descr);   
 
-//     add_rotate_function(&attempt_two, rotate_two_descr);   
-//     add_rotate_function(&attempt_three, rotate_three_descr);   
-//     add_rotate_function(&attempt_four, rotate_four_descr);   
-//     add_rotate_function(&attempt_five, rotate_five_descr);   
+    add_rotate_function(&attempt_two, rotate_two_descr);   
+    add_rotate_function(&attempt_three, rotate_three_descr);   
+    add_rotate_function(&attempt_four, rotate_four_descr);   
+    //add_rotate_function(&attempt_five, rotate_five_descr);   
     //add_rotate_function(&attempt_six, rotate_six_descr);   
     //add_rotate_function(&attempt_seven, rotate_seven_descr);   
     //add_rotate_function(&attempt_eight, rotate_eight_descr);   

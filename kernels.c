@@ -27,7 +27,7 @@ team_t team = {
     "jt.luo@mail.utoronto.ca",  /* First member email address */
 
     "Chang Liu",                /* Second member full name (leave blank if none) */
-    ""                    /* Second member email addr (leave blank if none) */
+    "cha.liu@mail.utoronto.ca"  /* Second member email addr (leave blank if none) */
 };
 
 /***************
@@ -45,7 +45,7 @@ unsigned get_seconds() {
     return t.tms_utime;
 }
 
-// for benchmarking
+// for benchmarking 
 void copy_block(int dim, pixel *src, pixel *dst, int B) 
 {
     int i, j, ii, jj, ii_limit, jj_limit;
@@ -209,6 +209,16 @@ void naive_rotate_unrolled(int dim, pixel *src, pixel *dst)
 }
 
 char default_naive_rotate_descr[] = "default_naive_rotate: Naive baseline implementation";
+char default_naive_rotate_descr[] = "default_naive_rotate: Naive baseline implementation";
+void default_naive_rotate(int dim, pixel *src, pixel *dst) 
+{
+    int i, j;
+
+    for (i = 0; i < dim; i++)
+	for (j = 0; j < dim; j++)
+	    dst[RIDX(dim-1-j, i, dim)] = src[RIDX(i, j, dim)];
+}
+
 void default_naive_rotate(int dim, pixel *src, pixel *dst) 
 {
     int i, j;
@@ -285,14 +295,15 @@ void rotate(int dim, pixel *src, pixel *dst)
     if (dim <= 0) return;
 
     // from empirical results
-    int cache_size = (dim > 724) ? 32 : 64;
+    int tile_i_size = (dim > 724) ? 128 : 256;
+    int tile_j_size = (dim > 724) ? 8 : 16;
 
     // the best tiles are not squares because we want to keep the j tiles to be 8
     // which is the number of pixels that fit in a cache line
-    new_rotate(dim, src, dst, cache_size*4, cache_size/4);
+    new_rotate(dim, src, dst, tile_i_size, tile_j_size);
 }
 
-
+// searching for optimal cache sizes
 char rotate_two_descr[] = "second attempt";
 void attempt_two(int dim, pixel *src, pixel *dst) 
 {
@@ -328,6 +339,7 @@ void attempt_five(int dim, pixel *src, pixel *dst)
 
 void register_rotate_functions() 
 {
+    // benchmark this should yield a speedup of 1.0 for an unloaded computer
 //     add_rotate_function(&default_naive_rotate, default_naive_rotate_descr);   
     add_rotate_function(&rotate, rotate_descr);   
 
